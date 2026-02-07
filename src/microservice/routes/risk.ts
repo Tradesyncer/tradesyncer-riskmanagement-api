@@ -1,12 +1,35 @@
 import { Router, Request, Response } from "express";
 import { TradovateAuth } from "../../lib/auth";
-import { getAutoLiqSettings, setAutoLiqSettings } from "../../lib/risk";
+import { setAutoLiqSettings, UserAccountAutoLiq } from "../../lib/risk";
 
 const router = Router();
+
+// Helper to detect expired Tradovate token errors
+function isTradovateTokenExpired(message: string): boolean {
+  return message.includes("401") && message.includes("Access is denied");
+}
+
+/**
+ * Safely fetch from an endpoint, returning null on 401.
+ */
+async function safeGet<T>(auth: TradovateAuth, endpoint: string, params: Record<string, string>): Promise<T | null> {
+  try {
+    return await auth.get<T>(endpoint, params);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("401") || msg.includes("Access is denied")) {
+      return null;
+    }
+    throw err;
+  }
+}
 
 /**
  * GET /risk/:accountId
  * Get current auto-liq settings for an account.
+ * Fetches BOTH owner and permissioned endpoints and merges them,
+ * because DLL/DPT may be on the permissioned entity while trailing
+ * drawdown etc. are on the owner entity.
  */
 router.get("/:accountId", async (req: Request, res: Response) => {
   try {
@@ -18,11 +41,51 @@ router.get("/:accountId", async (req: Request, res: Response) => {
       return;
     }
 
-    const settings = await getAutoLiqSettings(auth, accountId);
-    res.json({ success: true, autoLiq: settings[0] ?? null });
+    const params = { masterid: String(accountId) };
+
+    // Fetch both in parallel -- either may fail with 401 depending on permissions
+    const [ownerList, permList] = await Promise.all([
+      safeGet<UserAccountAutoLiq[]>(auth, "/userAccountAutoLiq/deps", params),
+      safeGet<UserAccountAutoLiq[]>(auth, "/permissionedAccountAutoLiq/deps", params),
+    ]);
+
+    const owner = ownerList?.[0] ?? null;
+    const perm = permList?.[0] ?? null;
+
+    console.log(`[risk] account ${accountId}: owner=${owner ? 'yes' : 'no'}, permissioned=${perm ? 'yes' : 'no'}`);
+
+    if (!owner && !perm) {
+      res.json({ success: true, settings: null });
+      return;
+    }
+
+    // Merge: permissioned values take priority for DLL/DPT,
+    // owner values for trailing drawdown etc.
+    res.json({
+      success: true,
+      settings: {
+        dailyLossAutoLiq: perm?.dailyLossAutoLiq ?? owner?.dailyLossAutoLiq,
+        dailyProfitAutoLiq: perm?.dailyProfitAutoLiq ?? owner?.dailyProfitAutoLiq,
+        weeklyLossAutoLiq: perm?.weeklyLossAutoLiq ?? owner?.weeklyLossAutoLiq,
+        weeklyProfitAutoLiq: perm?.weeklyProfitAutoLiq ?? owner?.weeklyProfitAutoLiq,
+        trailingMaxDrawdown: owner?.trailingMaxDrawdown ?? perm?.trailingMaxDrawdown,
+        trailingMaxDrawdownLimit: owner?.trailingMaxDrawdownLimit,
+        trailingMaxDrawdownMode: owner?.trailingMaxDrawdownMode,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error(`GET /risk/${req.params.accountId} error:`, message);
+
+    if (isTradovateTokenExpired(message)) {
+      res.status(401).json({
+        success: false,
+        error: "Tradovate token expired. Please reconnect your Tradovate connection.",
+        code: "TOKEN_EXPIRED",
+      });
+      return;
+    }
+
     res.status(500).json({ success: false, error: message });
   }
 });
@@ -81,10 +144,33 @@ router.post("/:accountId", async (req: Request, res: Response) => {
     }
 
     const result = await setAutoLiqSettings(auth, accountId, settings);
-    res.json({ success: true, autoLiq: result });
+
+    // Extract the settings from the response (handles both owner and permissioned)
+    const savedSettings =
+      result?.userAccountAutoLiq ?? result?.permissionedAccountAutoLiq ?? result;
+
+    res.json({
+      success: true,
+      settings: {
+        dailyLossAutoLiq: savedSettings?.dailyLossAutoLiq,
+        dailyProfitAutoLiq: savedSettings?.dailyProfitAutoLiq,
+        weeklyLossAutoLiq: savedSettings?.weeklyLossAutoLiq,
+        weeklyProfitAutoLiq: savedSettings?.weeklyProfitAutoLiq,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error(`POST /risk/${req.params.accountId} error:`, message);
+
+    if (isTradovateTokenExpired(message)) {
+      res.status(401).json({
+        success: false,
+        error: "Tradovate token expired. Please reconnect your Tradovate connection.",
+        code: "TOKEN_EXPIRED",
+      });
+      return;
+    }
+
     res.status(500).json({ success: false, error: message });
   }
 });

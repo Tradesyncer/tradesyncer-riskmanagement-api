@@ -49,15 +49,31 @@ export interface AutoLiqSettings {
 
 /**
  * Get existing auto-liq settings for an account.
+ * Tries the owner endpoint first, falls back to the permissioned endpoint.
  * Returns the settings array (may be empty if none exist).
  */
 export async function getAutoLiqSettings(
   auth: TradovateAuth,
   accountId: number
 ): Promise<UserAccountAutoLiq[]> {
-  return auth.get<UserAccountAutoLiq[]>("/userAccountAutoLiq/deps", {
-    masterid: String(accountId),
-  });
+  try {
+    return await auth.get<UserAccountAutoLiq[]>("/userAccountAutoLiq/deps", {
+      masterid: String(accountId),
+    });
+  } catch (ownerError) {
+    // If owner endpoint fails (401 for permissioned users), try permissioned endpoint
+    const msg = ownerError instanceof Error ? ownerError.message : "";
+    if (msg.includes("401") || msg.includes("Access is denied")) {
+      console.log(
+        `[risk] userAccountAutoLiq/deps denied for account ${accountId}, trying permissionedAccountAutoLiq/deps`
+      );
+      return auth.get<UserAccountAutoLiq[]>(
+        "/permissionedAccountAutoLiq/deps",
+        { masterid: String(accountId) }
+      );
+    }
+    throw ownerError;
+  }
 }
 
 /** List all auto-liq settings visible to the user. */

@@ -8,9 +8,10 @@
     "build": "next build",
     "start": "next start",
     "cli": "tsx src/scripts/cli.ts",
-    "service:dev": "tsx watch src/microservice/server.ts",
+    "service:dev": "NODE_ENV=development tsx watch src/microservice/server.ts",
+    "service:prod": "NODE_ENV=production tsx watch src/microservice/server.ts",
     "service:build": "tsc -p tsconfig.service.json",
-    "service:start": "node dist/microservice/server.js"
+    "service:start": "NODE_ENV=production node dist/microservice/server.js"
   },
   "keywords": [
     "tradovate",

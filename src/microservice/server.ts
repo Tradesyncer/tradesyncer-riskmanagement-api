@@ -1,4 +1,11 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+
+// Load environment-specific .env file
+const nodeEnv = process.env.NODE_ENV || "development";
+const envFile = nodeEnv === "production" ? ".env.prod" : ".env.dev";
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+console.log(`Loaded env: ${envFile} (NODE_ENV=${nodeEnv})`);
 import express from "express";
 import cors from "cors";
 import { initFirebase } from "./firebase";

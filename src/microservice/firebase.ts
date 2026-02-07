@@ -46,7 +46,7 @@ export async function verifyAuthToken(
 /**
  * Look up a Tradovate connection token from the Realtime Database.
  *
- * Path: renewAccessTokens/{userId}/{connectionRef}
+ * Path: renewAccessToken/{userId}/{connectionRef}
  * Returns: { token, url, ref, uid, timestamp }
  */
 export async function getConnectionToken(
@@ -61,7 +61,7 @@ export async function getConnectionToken(
 }> {
   const db = admin.database();
   const snapshot = await db
-    .ref(`renewAccessTokens/${userId}/${connectionRef}`)
+    .ref(`renewAccessToken/${userId}/${connectionRef}`)
     .once("value");
 
   const data = snapshot.val();
