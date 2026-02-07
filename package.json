@@ -1,0 +1,14 @@
+{
+  "name": "tradovate-risk-management",
+  "version": "1.0.0",
+  "description": "Set daily loss limits and profit targets on Tradovate accounts via API",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "cli": "tsx src/scripts/cli.ts"
+  },
+  "keywords": ["tradovate", "risk-management", "auto-liquidation"],
+  "license": "PRIVATE"
+}
