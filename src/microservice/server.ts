@@ -107,7 +107,7 @@ const init = async () => {
   console.log(`  GET  /risk-management/health                  - Health check`);
   console.log(`  GET  /risk-management/accounts                - List accounts`);
   console.log(`  GET  /risk-management/risk/{accountId}        - Get risk settings`);
-  console.log(`  POST /risk-management/risk/{accountId}        - Set risk settings`);
+  console.log(`  PUT  /risk-management/risk/{accountId}        - Set risk settings`);
 };
 
 process.on("unhandledRejection", (err) => {

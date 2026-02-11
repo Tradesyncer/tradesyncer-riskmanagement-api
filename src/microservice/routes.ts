@@ -246,7 +246,7 @@ export function registerRoutes(server: Hapi.Server): void {
   // Set risk settings
   // ------------------------------------------------------------------
   server.route({
-    method: "POST",
+    method: "PUT",
     path: "/risk-management/risk/{accountId}",
     options: {
       auth: "firebase",
