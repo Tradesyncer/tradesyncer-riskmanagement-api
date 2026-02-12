@@ -262,7 +262,7 @@ export const grafanaPlugin: Plugin<{}> = {
       path: "/metrics",
       options: {
         auth: false,
-        tags: ["api", "metrics"],
+        tags: ["metrics"],
         description: "Prometheus metrics endpoint",
         plugins: {
           "hapi-swagger": {
