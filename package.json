@@ -4,10 +4,14 @@
   "description": "Microservice for setting daily loss limits and profit targets on Tradovate accounts",
   "private": true,
   "scripts": {
-    "service:dev": "NODE_ENV=development tsx watch src/microservice/server.ts",
-    "service:prod": "NODE_ENV=production tsx watch src/microservice/server.ts",
+    "dev": "NODE_ENV=development tsx watch src/server.ts",
+    "prod": "NODE_ENV=production tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "NODE_ENV=production node dist/server.js",
+    "service:dev": "NODE_ENV=development tsx watch src/server.ts",
+    "service:prod": "NODE_ENV=production tsx watch src/server.ts",
     "service:build": "tsc",
-    "service:start": "NODE_ENV=production node dist/microservice/server.js"
+    "service:start": "NODE_ENV=production node dist/server.js"
   },
   "keywords": [
     "tradovate",
@@ -16,6 +20,7 @@
   ],
   "license": "PRIVATE",
   "dependencies": {
+    "@hapi/hapi": "^21.4.4",
     "@hapi/inert": "^7.1.0",
     "@hapi/vision": "^7.0.3",
     "@supabase/supabase-js": "^2.95.3",
@@ -24,7 +29,10 @@
     "hapi-rate-limit": "^8.0.0",
     "hapi-swagger": "^17.3.2",
     "joi": "^17.13.3",
-    "node-cache": "^5.1.2"
+    "node-cache": "^5.1.2",
+    "prom-client": "^15.1.3",
+    "winston": "^3.19.0",
+    "winston-loki": "^6.1.3"
   },
   "devDependencies": {
     "@types/hapi__inert": "^5.2.10",

@@ -1,5 +1,5 @@
 import Hapi from "@hapi/hapi";
-import { TradovateAuth } from "../lib/auth";
+import { TradovateAuth } from "./auth";
 import { verifyAuthToken } from "./firebase";
 import { getConnectionToken } from "./supabase";
 

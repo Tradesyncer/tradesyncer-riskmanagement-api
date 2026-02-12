@@ -1,40 +1,18 @@
-import Hapi from "@hapi/hapi";
+import type { Request, ServerRoute } from "@hapi/hapi";
 import Joi from "joi";
 import { TradovateAuth } from "../lib/auth";
-import { listAccounts } from "../lib/accounts";
 import { getAutoLiqSettings, setAutoLiqSettings } from "../lib/risk";
-import { getCachedRisk, setCachedRisk, invalidateCachedRisk, getAllCached } from "./cache";
+import { getCachedRisk, invalidateCachedRisk, setCachedRisk } from "../lib/cache";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getAuth(request: Hapi.Request): TradovateAuth {
-  return (request.auth.credentials as any).tradovateAuth;
+function getAuth(request: Request): TradovateAuth {
+  return (request.auth.credentials as { tradovateAuth: TradovateAuth }).tradovateAuth;
 }
-
-// ---------------------------------------------------------------------------
-// Response schemas
-// ---------------------------------------------------------------------------
 
 const ErrorSchema = Joi.object({
   success: Joi.boolean().example(false),
   error: Joi.string().example("Error description"),
   code: Joi.string().optional().example("TOKEN_EXPIRED"),
 }).label("ErrorResponse");
-
-const AccountSchema = Joi.object({
-  id: Joi.number().integer().example(37857980),
-  name: Joi.string().example("MFFUEVPRO203682060"),
-  userId: Joi.number().integer().example(150234),
-  accountType: Joi.string().example("Customer"),
-  active: Joi.boolean().example(true),
-  clearingHouseId: Joi.number().integer().optional(),
-  riskCategoryId: Joi.number().integer().optional(),
-  autoLiqProfileId: Joi.number().integer().optional(),
-  marginAccountType: Joi.string().optional().example("Speculator"),
-  legalStatus: Joi.string().optional().example("Individual"),
-}).label("Account");
 
 const AutoLiqSchema = Joi.object({
   id: Joi.number().integer().example(37857980),
@@ -58,115 +36,8 @@ const AutoLiqSchema = Joi.object({
   changesLocked: Joi.boolean().allow(null).optional(),
 }).unknown(true).label("AutoLiqSettings");
 
-// ---------------------------------------------------------------------------
-// Route registration
-// ---------------------------------------------------------------------------
-
-export function registerRoutes(server: Hapi.Server): void {
-  // ------------------------------------------------------------------
-  // Health check
-  // ------------------------------------------------------------------
-  server.route({
-    method: "GET",
-    path: "/risk-management/health",
-    options: {
-      auth: false,
-      tags: ["api", "System"],
-      description: "Health check",
-      notes: "Returns service status. No authentication required.",
-      response: {
-        status: {
-          200: Joi.object({
-            status: Joi.string().example("ok"),
-            service: Joi.string().example("tradovate-risk-management"),
-            timestamp: Joi.string().isoDate(),
-          }).label("HealthResponse"),
-        },
-      },
-    },
-    handler: () => ({
-      status: "ok",
-      service: "tradovate-risk-management",
-      timestamp: new Date().toISOString(),
-    }),
-  });
-
-  // ------------------------------------------------------------------
-  // Cache debug (no auth)
-  // ------------------------------------------------------------------
-  server.route({
-    method: "GET",
-    path: "/risk-management/cache",
-    options: {
-      auth: false,
-      tags: ["api", "System"],
-      description: "View cache contents",
-      notes: "Shows all cached risk settings with TTL. No authentication required. For debugging only.",
-    },
-    handler: () => ({
-      entries: getAllCached(),
-      timestamp: new Date().toISOString(),
-    }),
-  });
-
-  // ------------------------------------------------------------------
-  // List accounts
-  // ------------------------------------------------------------------
-  server.route({
-    method: "GET",
-    path: "/risk-management/accounts",
-    options: {
-      auth: "firebase",
-      tags: ["api", "Accounts"],
-      description: "List Tradovate accounts",
-      notes:
-        "Returns all accounts accessible by the authenticated user's Tradovate connection.",
-      validate: {
-        query: Joi.object({
-          connectionRef: Joi.string()
-            .required()
-            .description("Tradovate connection reference (e.g. TS-447E7D)"),
-        }),
-        headers: Joi.object({
-          authorization: Joi.string()
-            .required()
-            .description("Bearer <firebase_id_token>"),
-        }).unknown(true),
-      },
-      response: {
-        status: {
-          200: Joi.object({
-            success: Joi.boolean().example(true),
-            accounts: Joi.array().items(AccountSchema),
-          }).label("AccountsResponse"),
-          400: ErrorSchema,
-          401: ErrorSchema,
-          404: ErrorSchema,
-          500: ErrorSchema,
-        },
-      },
-    },
-    handler: async (request, h) => {
-      try {
-        const auth = getAuth(request);
-        const accounts = await listAccounts(auth);
-        return { success: true, accounts };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        console.error("GET /risk-management/accounts error:", message);
-
-        if (message.includes("401") || message.includes("Access is denied")) {
-          return h.response({ success: false, error: "Tradovate token expired. Please reconnect.", code: "TOKEN_EXPIRED" }).code(401);
-        }
-        return h.response({ success: false, error: message }).code(500);
-      }
-    },
-  });
-
-  // ------------------------------------------------------------------
-  // Get risk settings
-  // ------------------------------------------------------------------
-  server.route({
+export const riskRoutes: ServerRoute[] = [
+  {
     method: "GET",
     path: "/risk-management/risk/{accountId}",
     options: {
@@ -212,7 +83,6 @@ export function registerRoutes(server: Hapi.Server): void {
       try {
         const accountId = request.params.accountId as number;
 
-        // Check cache first
         const cached = getCachedRisk(accountId);
         if (cached) {
           console.log(`[cache] HIT for account ${accountId}`);
@@ -223,7 +93,6 @@ export function registerRoutes(server: Hapi.Server): void {
         const settings = await getAutoLiqSettings(auth, accountId);
         const autoLiq = settings[0] ?? null;
 
-        // Cache the result
         if (autoLiq) {
           setCachedRisk(accountId, autoLiq);
           console.log(`[cache] SET for account ${accountId}`);
@@ -240,12 +109,8 @@ export function registerRoutes(server: Hapi.Server): void {
         return h.response({ success: false, error: message }).code(500);
       }
     },
-  });
-
-  // ------------------------------------------------------------------
-  // Set risk settings
-  // ------------------------------------------------------------------
-  server.route({
+  },
+  {
     method: "PUT",
     path: "/risk-management/risk/{accountId}",
     options: {
@@ -268,11 +133,11 @@ export function registerRoutes(server: Hapi.Server): void {
             .example("TS-447E7D"),
           dailyLossAutoLiq: Joi.number()
             .optional()
-            .description("$ Daily Loss Limit — triggers auto-liquidation when daily loss reaches this amount")
+            .description("$ Daily Loss Limit - triggers auto-liquidation when daily loss reaches this amount")
             .example(500),
           dailyProfitAutoLiq: Joi.number()
             .optional()
-            .description("$ Daily Profit Target — triggers auto-liquidation when daily profit reaches this amount")
+            .description("$ Daily Profit Target - triggers auto-liquidation when daily profit reaches this amount")
             .example(1000),
           weeklyLossAutoLiq: Joi.number()
             .optional()
@@ -360,7 +225,6 @@ export function registerRoutes(server: Hapi.Server): void {
 
         const result = await setAutoLiqSettings(auth, accountId, settings);
 
-        // Update cache with new values
         invalidateCachedRisk(accountId);
         setCachedRisk(accountId, result);
         console.log(`[cache] UPDATED for account ${accountId}`);
@@ -391,5 +255,5 @@ export function registerRoutes(server: Hapi.Server): void {
         return h.response({ success: false, error: message }).code(500);
       }
     },
-  });
-}
+  },
+];

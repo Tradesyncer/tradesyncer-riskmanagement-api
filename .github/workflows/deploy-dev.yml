@@ -1,0 +1,76 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: tradesyncer-rm-api-testing
+  AZURE_RESOURCE_GROUP: tradesyncer-testing-rg
+  NODE_VERSION: "22.x"
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.DEV_AZURE_RM_API_PUBLISH_PROFILE }}
+          package: .
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure App Settings
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings \
+              NODE_ENV="development" \
+              PORT="8080" \
+              SUPABASE_URL="${{ secrets.DEV_SUPABASE_URL }}" \
+              SUPABASE_SERVICE_ROLE_KEY="${{ secrets.DEV_SUPABASE_SERVICE_ROLE_KEY }}" \
+              SERVICE_ACCOUNT_KEY='${{ secrets.DEV_SERVICE_ACCOUNT_KEY }}' \
+              GRAFANA_LOKI_URL="https://logs-prod-033.grafana.net" \
+              GRAFANA_LOKI_USER="1209168" \
+              GRAFANA_LOKI_TOKEN="${{ secrets.DEV_GRAFANA_CLOUD_TOKEN }}" \
+              GRAFANA_OTLP_URL="https://otlp-gateway-prod-me-central-1.grafana.net/otlp" \
+              GRAFANA_OTLP_USER="1251374"
+
+      - name: Configure Health Check
+        run: |
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --generic-configurations '{"healthCheckPath": "/risk-management/health"}'
+
+      - name: Deployment status
+        run: |
+          echo "Deployment to Development complete!"
+          echo "URL: https://tradesyncer-rm-api-testing.azurewebsites.net"
+          echo "Health check: https://tradesyncer-rm-api-testing.azurewebsites.net/risk-management/health"
+          echo "Metrics: https://tradesyncer-rm-api-testing.azurewebsites.net/metrics"
