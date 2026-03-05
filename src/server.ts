@@ -4,11 +4,6 @@ import Router from "./router";
 import Plugins from "./plugins";
 
 
-process.on("unhandledRejection", (err) => {
-  console.error(err);
-  process.exit(1);
-});
-
 export default class Server {
   private static _instance: Hapi.Server;
 
