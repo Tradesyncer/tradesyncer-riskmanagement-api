@@ -6,3 +6,4 @@ dist/
 *.js.map
 *.tsbuildinfo
 firebase-service-account.json
+logs/

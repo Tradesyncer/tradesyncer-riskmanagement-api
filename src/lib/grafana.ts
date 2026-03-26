@@ -57,11 +57,27 @@ if (isGrafanaConfigured) {
   console.log("Grafana Loki not configured - logs only to console");
 }
 
-export const logger = winston.createLogger({
+import { getFileLogger } from "./daily-logger";
+
+const _consoleLogger = winston.createLogger({
   level: isProduction ? "info" : "debug",
   defaultMeta: { service: "risk-management-api" },
   transports,
 });
+
+export const logger = new Proxy(_consoleLogger, {
+  get(target, prop) {
+    if (prop === "info" || prop === "warn" || prop === "error" || prop === "debug") {
+      return (message: string, meta?: any) => {
+        (target as any)[prop](message, meta);
+        try {
+          (getFileLogger() as any)[prop](message, meta);
+        } catch { /* file logger init may fail in some envs */ }
+      };
+    }
+    return (target as any)[prop];
+  },
+}) as winston.Logger;
 
 const register = new client.Registry();
 
