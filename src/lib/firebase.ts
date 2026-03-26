@@ -1,4 +1,5 @@
 import admin from "firebase-admin";
+import { logger } from "./grafana";
 
 let app: admin.app.App | null = null;
 
@@ -21,7 +22,7 @@ export function getFirebaseAdmin(): admin.app.App {
     });
   }
 
-  console.log("Firebase Admin initialized (auth only)");
+  logger.info("Firebase Admin initialized (auth only)");
   return app;
 }
 

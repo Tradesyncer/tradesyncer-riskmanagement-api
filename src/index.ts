@@ -11,21 +11,21 @@ console.log(`Loaded env: ${envFile} (NODE_ENV=${nodeEnv})`);
   await Server.start();
 })();
 
+function logFatal(label: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  try {
+    const { logger } = require("./lib/grafana");
+    logger.error(`${label}: ${message}`);
+  } catch { /* logger not ready */ }
+  console.error(label, err);
+}
 
 process.on('unhandledRejection', async (reason) => {
-  try {
-    console.error(reason);
-    process.exit(1);
-  } catch (error) {
-    console.error(error);
-  }
+  logFatal("Unhandled rejection", reason);
+  process.exit(1);
 });
 
 process.on('uncaughtException', async (error) => {
-  try {
-    console.error(error);
-    process.exit(1);
-  } catch (error) {
-    console.error(error);
-  }
+  logFatal("Uncaught exception", error);
+  process.exit(1);
 });

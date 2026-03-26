@@ -3,6 +3,7 @@ import { IGetAccountsRequest } from './interface';
 import { getConnectionToken } from '../../lib/supabase';
 import { TradovateAuth } from '../../lib/auth';
 import { listAccounts } from '../../lib/accounts';
+import { logger } from '../../lib/grafana';
 
 export class AccountsController {
 
@@ -26,7 +27,7 @@ export class AccountsController {
       return { success: true, accounts };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error("GET /risk-management/accounts error:", message);
+      logger.error(`GET /risk-management/accounts error: ${message}`, { uid });
 
       if (message.includes("401") || message.includes("Access is denied")) {
         return h.response({ success: false, error: "Tradovate token expired. Please reconnect.", code: "TOKEN_EXPIRED" }).code(401);

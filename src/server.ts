@@ -39,7 +39,7 @@ export default class Server {
 
       await Server._instance.start();
 
-      console.log(`Server - Up and running at http://${host}:${port}`);
+      logger.info(`Server up and running at http://${host}:${port}`);
 
       logger.info(`Risk Management Microservice running on ${Server._instance.info.uri}`);
       logger.info(`Docs: ${Server._instance.info.uri}/risk-management/docs`);
@@ -51,7 +51,7 @@ export default class Server {
 
       return Server._instance;
     } catch (error) {
-      console.log(`Server - Error:`, error);
+      logger.error(`Server startup error: ${(error as Error).message}`);
       throw error;
     }
   }

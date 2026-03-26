@@ -2,6 +2,7 @@ import Hapi from '@hapi/hapi';
 import * as admin from 'firebase-admin';
 import { badRequest, unauthorized } from '@hapi/boom';
 import pkg from '../../package.json';
+import { logger } from '../lib/grafana';
 
 function firebaseAuthScheme(server: Hapi.Server, options: { instance: admin.app.App }) {
   return {
@@ -57,9 +58,8 @@ async function validateToken(token: string, firebaseInstance: admin.app.App, h: 
 
     }).catch(function (error) {
 
-      console.log(error)
+      logger.warn(`Firebase token validation failed: ${(error as Error).message}`);
 
-      // Invalid token
       return badRequest('invalid_token');
     });
 }

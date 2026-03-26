@@ -2,6 +2,7 @@ import Hapi from "@hapi/hapi";
 import { TradovateAuth } from "./auth";
 import { verifyAuthToken } from "./firebase";
 import { getConnectionToken } from "./supabase";
+import { logger } from "./grafana";
 
 /**
  * Hapi auth plugin: verifies Firebase ID token, then looks up the
@@ -71,7 +72,7 @@ export const authPlugin: Hapi.Plugin<void> = {
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Authentication failed";
-          console.error("[auth] Error:", message);
+          logger.error(`Auth error: ${message}`);
 
           if (message.includes("Firebase ID token has expired") || message.includes("Decoding Firebase")) {
             return h.response({ error: "Invalid or expired auth token" }).code(401).takeover();

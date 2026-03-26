@@ -1,4 +1,5 @@
 import { TradovateAuth } from "./auth";
+import { logger } from "./grafana";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,7 +71,7 @@ export async function getAutoLiqSettings(
     if (!msg.includes("401") && !msg.includes("Access is denied")) {
       throw err;
     }
-    console.log(`[risk] userAccountAutoLiq/deps denied for account ${accountId}`);
+    logger.info(`userAccountAutoLiq/deps denied for account ${accountId}`, { accountId });
   }
 
   // Try permissioned endpoint
@@ -84,7 +85,7 @@ export async function getAutoLiqSettings(
     if (!msg.includes("401") && !msg.includes("Access is denied")) {
       throw err;
     }
-    console.log(`[risk] permissionedAccountAutoLiq/deps denied for account ${accountId}`);
+    logger.info(`permissionedAccountAutoLiq/deps denied for account ${accountId}`, { accountId });
   }
 
   // Merge: start with permissioned data, overlay user data on top
@@ -161,11 +162,9 @@ export async function setDailyLimits(
   dailyProfitTarget: number,
   keepClosed: boolean = true
 ): Promise<UserAccountAutoLiq> {
-  console.log(
-    `Setting account ${accountId}: ` +
-      `dailyLoss=$${dailyLossLimit}, dailyProfit=$${dailyProfitTarget}, ` +
-      `doNotUnlock=${keepClosed}`
-  );
+  logger.info(`Setting daily limits for account ${accountId}`, {
+    accountId, dailyLossLimit, dailyProfitTarget, doNotUnlock: keepClosed,
+  });
 
   return setAutoLiqSettings(auth, accountId, {
     dailyLossAutoLiq: dailyLossLimit,

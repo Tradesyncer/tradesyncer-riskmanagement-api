@@ -4,6 +4,7 @@ import { getAutoLiqSettings, setAutoLiqSettings } from '../../lib/risk';
 import { IGetRiskRequest, ISetRiskPayload, ISetRiskRequest } from './interface';
 import { getConnectionToken } from '../../lib/supabase';
 import { TradovateAuth } from '../../lib/auth';
+import { logger } from '../../lib/grafana';
 
 export class RiskController {
 
@@ -20,7 +21,7 @@ export class RiskController {
 
       const cached = await getCachedRisk(accountId);
       if (cached) {
-        console.log(`[cache] HIT for account ${accountId}`);
+        logger.info(`Cache HIT for account ${accountId}`, { uid, accountId });
         return { success: true, autoLiq: cached, cached: true };
       }
 
@@ -38,13 +39,13 @@ export class RiskController {
 
       if (autoLiq) {
         await setCachedRisk(accountId, autoLiq);
-        console.log(`[cache] SET for account ${accountId}`);
+        logger.info(`Cache SET for account ${accountId}`, { uid, accountId });
       }
 
       return { success: true, autoLiq, cached: false };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(`GET /risk-management/risk/${request.params.accountId} error:`, message);
+      logger.error(`GET /risk-management/risk/${request.params.accountId} error: ${message}`, { uid, accountId: request.params.accountId });
 
       if (message.includes("401") || message.includes("Access is denied")) {
         return h.response({ success: false, error: "Tradovate token expired. Please reconnect.", code: "TOKEN_EXPIRED" }).code(401);
@@ -102,12 +103,12 @@ export class RiskController {
 
       await invalidateCachedRisk(accountId);
       await setCachedRisk(accountId, result);
-      console.log(`[cache] UPDATED for account ${accountId}`);
+      logger.info(`Risk settings updated for account ${accountId}`, { uid, accountId, settings });
 
       return { success: true, autoLiq: result };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(`POST /risk-management/risk/${request.params.accountId} error:`, message);
+      logger.error(`PUT /risk-management/risk/${request.params.accountId} error: ${message}`, { uid, accountId: request.params.accountId });
 
       if (message.includes("401") || message.includes("Access is denied")) {
         return h

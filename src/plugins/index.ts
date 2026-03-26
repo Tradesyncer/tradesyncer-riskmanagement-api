@@ -4,7 +4,7 @@ import Vision from "@hapi/vision";
 import HapiSwagger from "hapi-swagger";
 import HapiRateLimit from "hapi-rate-limit";
 import { getFirebaseAdmin } from '../lib/firebase';
-import { grafanaPlugin } from "../lib/grafana";
+import { grafanaPlugin, logger } from "../lib/grafana";
 
 export default class Plugins {
 
@@ -23,7 +23,7 @@ export default class Plugins {
       })
 
     } catch (error) {
-      console.error(`Plugins - Ups, something went wrong when registering Firebase Auth plugin: ${(error as any).message}`);
+      logger.error(`Firebase Auth plugin registration failed: ${(error as any).message}`);
     }
   }
 

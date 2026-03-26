@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { logger } from "./grafana";
 
 let client: SupabaseClient | null = null;
 
@@ -15,7 +16,7 @@ export function getSupabase(): SupabaseClient {
     }
 
     client = createClient(url, key);
-    console.log("Supabase client initialized:", url);
+    logger.info(`Supabase client initialized: ${url}`);
   }
 
   return client;
