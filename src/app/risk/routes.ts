@@ -77,43 +77,55 @@ export class RiskRoutes {
                   .description("Tradovate connection reference")
                   .example("TS-447E7D"),
                 dailyLossAutoLiq: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("$ Daily Loss Limit - triggers auto-liquidation when daily loss reaches this amount")
+                  .description("$ Daily Loss Limit — set a value to enable, send null to disable")
                   .example(500),
                 dailyProfitAutoLiq: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("$ Daily Profit Target - triggers auto-liquidation when daily profit reaches this amount")
+                  .description("$ Daily Profit Target — set a value to enable, send null to disable")
                   .example(1000),
                 weeklyLossAutoLiq: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("$ Weekly Loss Limit"),
+                  .description("$ Weekly Loss Limit — send null to disable"),
                 weeklyProfitAutoLiq: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("$ Weekly Profit Target"),
+                  .description("$ Weekly Profit Target — send null to disable"),
                 dailyLossAlert: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("$ Daily Loss Alert threshold"),
+                  .description("$ Daily Loss Alert threshold — send null to disable"),
                 dailyLossPercentageAlert: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("Daily Loss % for Alert"),
+                  .description("Daily Loss % for Alert — send null to disable"),
                 marginPercentageAlert: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("Margin % for Alert"),
+                  .description("Margin % for Alert — send null to disable"),
                 dailyLossLiqOnly: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("$ Daily Loss for Liquidate-Only mode"),
+                  .description("$ Daily Loss for Liquidate-Only mode — send null to disable"),
                 dailyLossPercentageLiqOnly: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("Daily Loss % for Liq-Only"),
+                  .description("Daily Loss % for Liq-Only — send null to disable"),
                 marginPercentageLiqOnly: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("Margin % for Liq-Only"),
+                  .description("Margin % for Liq-Only — send null to disable"),
                 dailyLossPercentageAutoLiq: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("Daily Loss % for Auto-Liq"),
+                  .description("Daily Loss % for Auto-Liq — send null to disable"),
                 marginPercentageAutoLiq: Joi.number()
+                  .allow(null)
                   .optional()
-                  .description("Margin % for Auto-Liq"),
+                  .description("Margin % for Auto-Liq — send null to disable"),
               }).label("SetRiskPayload"),
               headers: Joi.object({
                 authorization: Joi.string()

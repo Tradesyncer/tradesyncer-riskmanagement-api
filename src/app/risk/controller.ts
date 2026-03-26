@@ -87,8 +87,8 @@ export class RiskController {
 
       const settings: Record<string, unknown> = {};
       for (const field of allowedFields) {
-        if (payload[field as keyof ISetRiskPayload] != null) {
-          settings[field] = payload[field as keyof ISetRiskPayload];
+        if (field in payload) {
+          settings[field] = payload[field as keyof ISetRiskPayload] ?? null;
         }
       }
 
