@@ -44,15 +44,30 @@ export class TradovateAuth {
 
     const elapsed = Date.now() - start;
 
+    const text = await response.text();
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      if (!response.ok) {
+        logger.error(`Tradovate API ← GET ${endpoint} ${response.status} (${elapsed}ms)`, { body: text });
+        throw new Error(`GET ${endpoint} failed (${response.status}): ${text}`);
+      }
+      throw new Error(`GET ${endpoint}: invalid JSON response`);
+    }
+
+    if (json["p-ticket"]) {
+      logger.warn(`Tradovate p-ticket on GET ${endpoint} — GET retries not supported, failing`);
+      throw new Error(`GET ${endpoint}: rate limited (p-ticket). Try again in ${json["p-time"] ?? 3}s.`);
+    }
+
     if (!response.ok) {
-      const text = await response.text();
       logger.error(`Tradovate API ← GET ${endpoint} ${response.status} (${elapsed}ms)`, { body: text });
       throw new Error(`GET ${endpoint} failed (${response.status}): ${text}`);
     }
 
-    const json = await response.json() as T;
     logger.info(`Tradovate API ← GET ${endpoint} ${response.status} (${elapsed}ms)`);
-    return json;
+    return json as T;
   }
 
   async post<T>(endpoint: string, body: unknown): Promise<T> {

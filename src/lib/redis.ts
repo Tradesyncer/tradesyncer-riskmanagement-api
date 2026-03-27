@@ -8,15 +8,18 @@ import { logger } from "./grafana";
 
 let redisClient: RedisClientType | null = null;
 let isConnecting = false;
-
-const REDIS_URL = process.env.REDIS_URL;
+let redisDisabledLogged = false;
 
 /**
  * Get or create Redis client connection
  */
 export async function getRedisClient(): Promise<RedisClientType | null> {
+  const REDIS_URL = process.env.REDIS_URL;
   if (!REDIS_URL) {
-    logger.warn("⚠️ REDIS_URL not set - Redis features disabled");
+    if (!redisDisabledLogged) {
+      logger.warn("REDIS_URL not set - Redis features disabled, using in-memory cache only");
+      redisDisabledLogged = true;
+    }
     return null;
   }
 
