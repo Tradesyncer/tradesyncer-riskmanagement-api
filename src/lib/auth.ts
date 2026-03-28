@@ -1,6 +1,6 @@
 import { logger } from "./grafana";
 
-const P_TICKET_MAX_ATTEMPTS = 20;
+const P_TICKET_MAX_ATTEMPTS = 5;
 const P_TICKET_DEFAULT_WAIT = 3;
 
 export class TradovateAuth {
@@ -181,7 +181,24 @@ export class TradovateAuth {
       return json as T;
     }
 
-    logger.error(`Tradovate p-ticket exhausted ${P_TICKET_MAX_ATTEMPTS} attempts for POST ${endpoint}`);
+    logger.error(`Tradovate p-ticket exhausted ${P_TICKET_MAX_ATTEMPTS} attempts for POST ${endpoint}, releasing via /user/list`);
+    await this.releasePTicket(token, pTicket);
     throw new Error(`POST ${endpoint}: p-ticket polling exhausted after ${P_TICKET_MAX_ATTEMPTS} attempts`);
+  }
+
+  private async releasePTicket(token: string, pTicket: string): Promise<void> {
+    try {
+      const url = `${this.baseUrl}/user/list?p-ticket=${encodeURIComponent(pTicket)}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+      logger.info(`p-ticket release via /user/list — ${response.status}`, { pTicket });
+    } catch (err) {
+      logger.warn(`p-ticket release via /user/list failed: ${(err as Error).message}`);
+    }
   }
 }
